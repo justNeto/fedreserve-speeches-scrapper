@@ -16,6 +16,7 @@ from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 from selenium.webdriver.support import expected_conditions as ExpectedConditions
 
+from datetime import datetime
 '''
 Selenium wrapper class for simplicity
 '''
@@ -133,10 +134,13 @@ class TestGetPowellsLinks():
             # Combine all extracted information into one text block
             article_data = f"Date: {date_data}\n\nTitle: {title_data}\n\nSpeaker: {speaker_data}\n\nLocation: {location_data}\n\n{''.join(content_text)}"
             print(f"::-> Generating article <-::\n")
-            sanitized_title = self.sanitize_filename(title_data) + "_" + self.sanitize_filename(date_data)
+            sanitized_date = datetime.strptime(self.sanitize_filename(date_data), "%B %d, %Y")
+            sanitized_title = self.sanitize_filename(title_data)
+
+            sanitized_file_name = sanitized_title + "_" + sanitized_date
             
             # Save to a file
-            file_name = f'{sanitized_title.replace(" ", "_")}.txt'  # Ensure valid file name
+            file_name = f'{sanitized_file_name.replace(" ", "_")}.txt'  # Ensure valid file name
             data_path = os.path.join(os.path.abspath(os.getcwd()), "data")  # Cross-platform path handling
 
             if not os.path.exists(data_path):
