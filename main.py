@@ -132,13 +132,13 @@ class TestGetPowellsLinks():
             print(f"::-> Article data:\n{article_data}")
 
             # Save to a file
-            file_name = f"{title_data.replace(" ", "_")}.txt"
-            data_path = os.path.abspath(os.getcwd()) + "/data"
+            file_name = f'{title_data.replace(" ", "_")}.txt'
+            data_path = os.path.join(os.path.abspath(os.getcwd()), "data")
 
             if not os.path.exists(data_path):
                 os.makedirs(data_path)
 
-            with open(os.path.join(data_path, file_name), 'w') as fp:
+            with open(os.path.join(data_path, file_name), 'w', encoding='utf-8') as fp:
                 fp.write(article_data)
 
         except Exception as e:
