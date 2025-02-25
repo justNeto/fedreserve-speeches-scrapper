@@ -133,8 +133,10 @@ class TestGetPowellsLinks():
 
             # Save to a file
             file_name = f"{title_data.replace(" ", "_")}.txt"
+            data_path = os.path.abspath(os.getcwd()) + "/data"
 
-            path = os.path.abspath(os.getcwd()) + "/data"
+            if not os.path.exists(data_path):
+                os.makedirs(data_path)
 
             with open(os.path.join(path, file_name), 'w') as fp:
                 fp.write(article_data)
@@ -220,6 +222,8 @@ class TestGetPowellsLinks():
             # Extract all data using the list
             for link in self.speech_links:
                 self.generate_document(link)
+
+            self.teardown_method()
         except Exception as e:
             self.teardown_method()
 
