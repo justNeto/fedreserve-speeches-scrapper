@@ -133,7 +133,7 @@ class TestGetPowellsLinks():
             # Combine all extracted information into one text block
             article_data = f"Date: {date_data}\n\nTitle: {title_data}\n\nSpeaker: {speaker_data}\n\nLocation: {location_data}\n\n{''.join(content_text)}"
             print(f"::-> Generating article <-::\n")
-            sanitized_title = self.sanitize_filename(title_data)
+            sanitized_title = self.sanitize_filename(title_data) + "_" + self.sanitize_filename(date_data)
             
             # Save to a file
             file_name = f'{sanitized_title.replace(" ", "_")}.txt'  # Ensure valid file name
