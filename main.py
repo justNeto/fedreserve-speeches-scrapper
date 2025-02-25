@@ -79,7 +79,7 @@ class TestGetPowellsLinks():
         self.target = None
 
     # Sanitize the file name to remove invalid characters
-    def sanitize_filename(filename):
+    def sanitize_filename(self, filename):
         # Remove characters that are not allowed in Windows file names
         return re.sub(r'[<>:"/\\|?*]', '_', filename)
 
@@ -133,7 +133,7 @@ class TestGetPowellsLinks():
             # Combine all extracted information into one text block
             article_data = f"Date: {date_data}\n\nTitle: {title_data}\n\nSpeaker: {speaker_data}\n\nLocation: {location_data}\n\n{''.join(content_text)}"
             print(f"::-> Generating article <-::\n")
-            sanitized_title = sanitize_filename(title_data)
+            sanitized_title = self.sanitize_filename(title_data)
             
             # Save to a file
             file_name = f'{sanitized_title.replace(" ", "_")}.txt'  # Ensure valid file name
