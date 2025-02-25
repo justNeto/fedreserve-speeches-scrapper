@@ -138,7 +138,7 @@ class TestGetPowellsLinks():
             if not os.path.exists(data_path):
                 os.makedirs(data_path)
 
-            with open(os.path.join(path, file_name), 'w') as fp:
+            with open(os.path.join(data_path, file_name), 'w') as fp:
                 fp.write(article_data)
 
         except Exception as e:
@@ -230,6 +230,6 @@ class TestGetPowellsLinks():
 
 if __name__ == '__main__':
     speeches = TestGetPowellsLinks()
-    options = SeleniumOptions(browser="firefox", headless=True, speaker="jefferson")
+    options = SeleniumOptions(browser="firefox", headless=True, speaker="powell")
     speeches.setup_method(options)
     speeches.run()
