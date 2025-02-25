@@ -11,7 +11,7 @@ from selenium.webdriver.firefox.options import Options as FirefoxOptions
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.wait import WebDriverWait
-from selenium.webdriver.support import expected_conditions
+from selenium.webdriver.support import expected_conditions as ExpectedConditions
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 
@@ -59,68 +59,79 @@ class SeleniumOptions():
 
 
     def get_driver(self):
-        return self.driver, self._speakers[self.speaker]
+        return self.driver, self._speakers[self.speaker], self.speaker
 
 
 class TestGetPowellsLinks():
 
     def __init__(self):
         self.speech_links = list()
+        self.nth_child = None
+        self.target = None
 
-    def extract_speeches_links():
-        seach_string = ".checkbox:nth-child(" + str(self.speaker) + ") .ng-scope"
+    def select_target(self):
+        self.driver.get("https://www.federalreserve.gov/newsevents/speeches.htm")
+        seach_string = ".checkbox:nth-child(" + str(self.nth_child) + ") .ng-scope"
         self.driver.find_element(By.CSS_SELECTOR, seach_string).click()
         self.driver.find_element(By.CSS_SELECTOR, ".icon-more").click()
+
+    def extract_speeches_links(self):
         a_elements = self.driver.find_elements(By.XPATH, "//a[@href]")
 
+        base_string = "^https://www.federalreserve.gov/newsevents/speech/"
+        re_match_string = base_string + self.target + ".*$"
+
         for element in a_elements:
-            if re.match('^https://www.federalreserve.gov/newsevents/speech/.*$', element.get_attribute("href")):
+            if re.match(re_match_string, element.get_attribute("href")):
                 self.speech_links.append(element.get_attribute("href"))
 
     def setup_method(self, options):
-        self.driver, self.speaker  = options.get_driver()
+        self.driver, self.nth_child, self.target  = options.get_driver()
         self.vars = {}
 
     def teardown_method(self):
         self.driver.quit()
 
     def run(self):
-        self.driver.get("https://www.federalreserve.gov/newsevents/speeches.htm")
+        self.select_target()
 
-        while True:
+        # Find the pagination <ul> element
+        pagination_ul = self.driver.find_element(By.XPATH, "//ul[@uib-pagination]")
+
+        # Find all the <a> elements inside the pagination <ul> (these represent the page numbers)
+        page_links = pagination_ul.find_elements(By.TAG_NAME, "a")
+
+        # Capture the number of pages in the pagination (max size is 4, but you can confirm the number of visible links)
+        total_pages = len(page_links) - 2
+
+        # Print out the number of pages for debugging
+        print(f"::-> Total Pages: {total_pages}")
+
+        current_page = 1
+
+        while current_page < total_pages:
             try:
+
                 # Scrape data on the current page
-                time.sleep(2)
+                time.sleep(1)
 
-                # Try to find the "Next" button
-                next_button = self.driver.find_element(By.XPATH, "//li[@class='pagination-next']//a")
+                print(f"::-> Scrapping page {current_page}")
+                self.extract_speeches_links()
 
-                # Check if the "Next" button is disabled
-                if "disabled" in next_button.get_attribute("class"):
-                    print("No more pages to scrape.")
-                    break  # Exit the loop when "Next" is disabled
-
-                # Click the "Next" button to go to the next page
+                next_button = self.driver.find_element(By.XPATH, "//li[contains(@class, 'pagination-next')]//a[text()='Next']")
                 next_button.click()
+                current_page += 1
 
             except Exception as e:
-                print(f"Error occurred: {e}")
+                print(f"::!-> Error occurred: {e}")
                 break  # Exit the loop if there is an error (e.g., no "Next" button found)
 
-        # seach_string = ".checkbox:nth-child(" + str(self.speaker) + ") .ng-scope"
-        # self.driver.find_element(By.CSS_SELECTOR, seach_string).click()
-        # self.driver.find_element(By.CSS_SELECTOR, ".icon-more").click()
-        #
-        # a_elements = self.driver.find_elements(By.XPATH, "//a[@href]")
-        # self.speech_links = [element.get_attribute("href") for element in a_elements if re.match('^https://www.federalreserve.gov/newsevents/speech/.*$', element.get_attribute("href"))]
-
-        print(self.speech_links)
-
+        printf("::-> Speeches found:\n {self.speech_links}")
 
 
 if __name__ == '__main__':
     speeches = TestGetPowellsLinks()
-    options = SeleniumOptions(browser="firefox", headless=True, speaker="jefferson")
+    options = SeleniumOptions(browser="firefox", headless=True, speaker="powell")
     # options = SeleniumOptions(browser="firefox")
     speeches.setup_method(options)
     speeches.run()
