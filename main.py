@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import os
 import re
 import time
 
@@ -19,11 +20,19 @@ from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 Selenium wrapper class for simplicity
 '''
 class SeleniumOptions():
+
     def __init__(self, browser="Chrome", headless=False, speaker="powell"):
 
         self._speakers = {
                 "powell": 1,
-                "jefferson": 2
+                "jefferson": 2,
+                "barr": 3,
+                "bowman": 4,
+                "cook": 6,
+                "kugler": 7,
+                "waller": 8,
+                "former": 9,
+                "other": 10
         }
 
         self.speaker = speaker
@@ -69,28 +78,64 @@ class TestGetPowellsLinks():
         self.nth_child = None
         self.target = None
 
+
+    def generate_document(self):
+        title_element = self.driver.find_element(By.XPATH, "//h3[@class='title']/em")
+        title_text = title_element.text
+        print(f"::-> Title:\n {title_text}")
+
+        data_div = self.driver.find_element(By.XPATH, "//div[@class='col-xs-12 col-sm-8 col-md-8']")
+        paragraphs = data_div.find_elements(By.TAG_NAME, "p")
+
+        # Combine the text of all <p> elements (if there are multiple <p> tags)
+        data_text = "\n".join([para.text for para in paragraphs])
+        print(f"::-> Data text:\n {data_text}")
+
+        file_name = self.target + title_text
+        path = os.path.abspath(os.getcwd()) + "data"
+
+        with open(os.path.join(path, file_name), 'w') as fp:
+            # uncomment below line if you want to create an empty file
+            fp.write(title_text)
+            fp.write("\n")
+            fp.write(data_text)
+
+
     def select_target(self):
         self.driver.get("https://www.federalreserve.gov/newsevents/speeches.htm")
         seach_string = ".checkbox:nth-child(" + str(self.nth_child) + ") .ng-scope"
         self.driver.find_element(By.CSS_SELECTOR, seach_string).click()
         self.driver.find_element(By.CSS_SELECTOR, ".icon-more").click()
 
+
     def extract_speeches_links(self):
+        base_string = "^https://www.federalreserve.gov/newsevents/speech/"
         a_elements = self.driver.find_elements(By.XPATH, "//a[@href]")
 
-        base_string = "^https://www.federalreserve.gov/newsevents/speech/"
-        re_match_string = base_string + self.target + ".*$"
+        if self.target == "former" or self.target == "other":
+            speaker_element = self.driver.find_element(By.XPATH, "//p[@class='news__speaker ng-binding']")
+            speaker_name = speaker_element.text
+            name_parts = speaker_name.split()
+            last_name = name_parts[-1]  # should get the last name
+            print(f"::-> Last Name found: {last_name}")
+
+            re_match_string = base_string + last_name + ".*$"
+        else:
+            re_match_string = base_string + self.target + ".*$"
 
         for element in a_elements:
             if re.match(re_match_string, element.get_attribute("href")):
                 self.speech_links.append(element.get_attribute("href"))
 
+
     def setup_method(self, options):
         self.driver, self.nth_child, self.target  = options.get_driver()
         self.vars = {}
 
+
     def teardown_method(self):
         self.driver.quit()
+
 
     def run(self):
         self.select_target()
@@ -126,13 +171,16 @@ class TestGetPowellsLinks():
                 print(f"::!-> Error occurred: {e}")
                 break  # Exit the loop if there is an error (e.g., no "Next" button found)
 
-        printf("::-> Speeches found:\n {self.speech_links}")
+        print(f"::-> Speeches found:\n {self.speech_links}")
+
+        # Excract all data using the list
+        for link in self.speech_links:
+            generate_document(link)
 
 
 if __name__ == '__main__':
     speeches = TestGetPowellsLinks()
     options = SeleniumOptions(browser="firefox", headless=True, speaker="powell")
-    # options = SeleniumOptions(browser="firefox")
     speeches.setup_method(options)
     speeches.run()
     speeches.teardown_method()
