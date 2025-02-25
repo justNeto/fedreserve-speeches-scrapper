@@ -78,6 +78,10 @@ class TestGetPowellsLinks():
         self.nth_child = None
         self.target = None
 
+    # Sanitize the file name to remove invalid characters
+    def sanitize_filename(filename):
+        # Remove characters that are not allowed in Windows file names
+        return re.sub(r'[<>:"/\\|?*]', '_', filename)
 
     def generate_document(self, link):
 
@@ -118,7 +122,6 @@ class TestGetPowellsLinks():
                     f"location data inexistent"
                 )
 
-
             try:
                 content_paragraphs = self.driver.find_elements(By.ID, "article")
                 content_text = "\n".join([para.text for para in content_paragraphs])
@@ -129,11 +132,12 @@ class TestGetPowellsLinks():
 
             # Combine all extracted information into one text block
             article_data = f"Date: {date_data}\n\nTitle: {title_data}\n\nSpeaker: {speaker_data}\n\nLocation: {location_data}\n\n{''.join(content_text)}"
-            print(f"::-> Article data:\n{article_data}")
-
+            print(f"::-> Generating article <-::\n")
+            sanitized_title = sanitize_filename(title_data)
+            
             # Save to a file
-            file_name = f'{title_data.replace(" ", "_")}.txt'
-            data_path = os.path.join(os.path.abspath(os.getcwd()), "data")
+            file_name = f'{sanitized_title.replace(" ", "_")}.txt'  # Ensure valid file name
+            data_path = os.path.join(os.path.abspath(os.getcwd()), "data")  # Cross-platform path handling
 
             if not os.path.exists(data_path):
                 os.makedirs(data_path)
