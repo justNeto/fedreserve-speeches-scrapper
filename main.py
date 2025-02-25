@@ -134,7 +134,7 @@ class TestGetPowellsLinks():
             # Combine all extracted information into one text block
             article_data = f"Date: {date_data}\n\nTitle: {title_data}\n\nSpeaker: {speaker_data}\n\nLocation: {location_data}\n\n{''.join(content_text)}"
             print(f"::-> Generating article <-::\n")
-            sanitized_date = datetime.strptime(self.sanitize_filename(date_data), "%B %d, %Y")
+            sanitized_date = datetime.strptime(date_data, "%B %d, %Y").strftime("%m_%d_%Y")
             sanitized_title = self.sanitize_filename(title_data)
 
             sanitized_file_name = sanitized_title + "_" + sanitized_date
