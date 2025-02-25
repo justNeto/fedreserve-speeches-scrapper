@@ -12,9 +12,9 @@ from selenium.webdriver.firefox.options import Options as FirefoxOptions
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.wait import WebDriverWait
-from selenium.webdriver.support import expected_conditions as ExpectedConditions
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
+from selenium.webdriver.support import expected_conditions as ExpectedConditions
 
 '''
 Selenium wrapper class for simplicity
@@ -58,7 +58,7 @@ class SeleniumOptions():
             elif self.headless is False:
                 pass
             else:
-                raise Exception("Unexpected error occurred")
+                raise
 
             if self.config.window_size:
                 self.selenium_options.set_window_size(1872, 1344)
@@ -79,26 +79,69 @@ class TestGetPowellsLinks():
         self.target = None
 
 
-    def generate_document(self):
-        title_element = self.driver.find_element(By.XPATH, "//h3[@class='title']/em")
-        title_text = title_element.text
-        print(f"::-> Title:\n {title_text}")
+    def generate_document(self, link):
 
-        data_div = self.driver.find_element(By.XPATH, "//div[@class='col-xs-12 col-sm-8 col-md-8']")
-        paragraphs = data_div.find_elements(By.TAG_NAME, "p")
+        try:
+            self.driver.get(link)
+            print(f"::-> Generate document for link {link}")
 
-        # Combine the text of all <p> elements (if there are multiple <p> tags)
-        data_text = "\n".join([para.text for para in paragraphs])
-        print(f"::-> Data text:\n {data_text}")
+            # Wait until the article element is loaded
+            article_element = WebDriverWait(self.driver, 10).until(
+                ExpectedConditions.presence_of_element_located((By.CLASS_NAME, "title"))
+            )
 
-        file_name = self.target + title_text
-        path = os.path.abspath(os.getcwd()) + "data"
+            try:
+                date_data = self.driver.find_element(By.CLASS_NAME, "article__time").text
+            except:
+                raise ValueError(
+                    f"date data inexistent"
+                )
 
-        with open(os.path.join(path, file_name), 'w') as fp:
-            # uncomment below line if you want to create an empty file
-            fp.write(title_text)
-            fp.write("\n")
-            fp.write(data_text)
+            try:
+                title_data = self.driver.find_element(By.CLASS_NAME, "title").text
+            except:
+                raise ValueError(
+                    f"title data inexistent"
+                )
+
+            try:
+                speaker_data = self.driver.find_element(By.CLASS_NAME, "speaker").text
+            except:
+                raise ValueError(
+                    f"speaker data inexistent"
+                )
+
+            try:
+                location_data = self.driver.find_element(By.CLASS_NAME, "location").text
+            except:
+                raise ValueError(
+                    f"location data inexistent"
+                )
+
+
+            try:
+                content_paragraphs = self.driver.find_elements(By.ID, "article")
+                content_text = "\n".join([para.text for para in content_paragraphs])
+            except:
+                raise ValueError(
+                    f"content data inexistent"
+                )
+
+            # Combine all extracted information into one text block
+            article_data = f"Date: {date_data}\n\nTitle: {title_data}\n\nSpeaker: {speaker_data}\n\nLocation: {location_data}\n\n{''.join(content_text)}"
+            print(f"::-> Article data:\n{article_data}")
+
+            # Save to a file
+            file_name = f"{title_data.replace(" ", "_")}.txt"
+
+            path = os.path.abspath(os.getcwd()) + "/data"
+
+            with open(os.path.join(path, file_name), 'w') as fp:
+                fp.write(article_data)
+
+        except Exception as e:
+            print(f"::!-> Error occurred:\n {e}")
+            raise e
 
 
     def select_target(self):
@@ -160,7 +203,7 @@ class TestGetPowellsLinks():
                 # Scrape data on the current page
                 time.sleep(1)
 
-                print(f"::-> Scrapping page {current_page}")
+                print(f"::-> Extracting page link from page {current_page}")
                 self.extract_speeches_links()
 
                 next_button = self.driver.find_element(By.XPATH, "//li[contains(@class, 'pagination-next')]//a[text()='Next']")
@@ -168,19 +211,21 @@ class TestGetPowellsLinks():
                 current_page += 1
 
             except Exception as e:
-                print(f"::!-> Error occurred: {e}")
+                print(f"::!->\n Error occurred: {e}")
                 break  # Exit the loop if there is an error (e.g., no "Next" button found)
 
-        print(f"::-> Speeches found:\n {self.speech_links}")
+        print(f"::-> Speeches found:\n {self.speech_links} \n\n <-::")
 
-        # Excract all data using the list
-        for link in self.speech_links:
-            generate_document(link)
+        try:
+            # Extract all data using the list
+            for link in self.speech_links:
+                self.generate_document(link)
+        except Exception as e:
+            self.teardown_method()
 
 
 if __name__ == '__main__':
     speeches = TestGetPowellsLinks()
-    options = SeleniumOptions(browser="firefox", headless=True, speaker="powell")
+    options = SeleniumOptions(browser="firefox", headless=True, speaker="jefferson")
     speeches.setup_method(options)
     speeches.run()
-    speeches.teardown_method()
