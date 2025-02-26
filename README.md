@@ -7,18 +7,13 @@ pip install -r requirements.txt
 ```
 
 ## Usage
-Usage with python3
-```bash
-python main.py
-```
+To use this scrapper just import it with the specified options and use the .run() method. By default it will create a directory /data on the current folder, in which it will download a .txt of the speeches from a specific actor.
 
-Inside the file the speecher to be download for can be specified:
-```bash
-if __name__ == '__main__':
-    speeches = TestGetPowellsLinks()
-    options = SeleniumOptions(browser="firefox", headless=True, speaker="jefferson")
-    speeches.setup_method(options)
-    speeches.run()
+Options:
+```python
+from federal_scrapper import FederalScrapper
+federal_scrapper = FederalScrapper(browser="firefox", headless=False, speaker="powell", debug=False, download_dir="path")
+federal_scrapper.run()
 ```
 
 Possible speakers:
@@ -35,7 +30,3 @@ Possible speakers:
     "other"
 }
 ```
-
-TODO: test other/former. Not tested
-
-Is possible to make a loop and iterate through each of the users if desirable. Data will be downloaded in data/
