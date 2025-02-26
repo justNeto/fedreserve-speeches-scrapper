@@ -26,6 +26,10 @@
                     beautifulsoup4
                     lxml
                     selenium
+                    jupyter
+                    wordcloud
+                    matplotlib
+                    nltk
                 ]);
             };
         });
