@@ -17,11 +17,20 @@ from selenium.webdriver.support import expected_conditions as ExpectedConditions
 
 from datetime import datetime
 '''
-Selenium wrapper class for simplicity
+FederalScrapper class to extract data from the speeches website using a speaker as a user. Defaults to powell if no speaker is set
 '''
-class SeleniumOptions():
+class FederalScrapper():
 
-    def __init__(self, browser="Chrome", headless=False, speaker="powell"):
+    # Sanitize the file name to remove invalid characters (on windows mainly)
+    def sanitize_filename(self, filename):
+        return re.sub(r'[<>:"/\\|?*]', '_', filename)
+
+    def __init__(self, browser="chrome", headless=False, speaker="powell"):
+
+        # Scrapper public members
+        self.speaker = speaker
+        self.headless = headless
+        self.browser = browser
 
         self._speakers = {
                 "powell": 1,
@@ -35,95 +44,80 @@ class SeleniumOptions():
                 "other": 10
         }
 
-        self.speaker = speaker
-        self.headless = headless
-        self.browser = browser
-        self.driver = None
+        # Selenium private members
+        self._driver = None
+        self._options = None
+        self._nth_child = self._speakers[self.speaker]
+        self._speeches_links = list()
 
         # Instance a selenium options object to return
         try:
             if self.browser == "chrome":
-                self.selenium_options = webdriver.ChromeOptions()
-                self.driver = webdriver.Chrome()
+                self._options = webdriver.ChromeOptions()
+                self._driver = webdriver.Chrome()
             elif self.browser == "firefox":
-                self.selenium_options = webdriver.FirefoxOptions()
-                self.driver = webdriver.Firefox()
+                self.browser = webdriver.FirefoxOptions()
+                self._driver = webdriver.Firefox()
             else:
                 raise AttributeError(
                     f"wrong browser specified"
                 )
 
             if self.headless is True:
-                self.selenium_options.add_argument("--headless")
+                self._options.add_argument("--headless")
             elif self.headless is False:
                 pass
             else:
                 raise
 
             if self.config.window_size:
-                self.selenium_options.set_window_size(1872, 1344)
+                self._options.set_window_size(1872, 1344)
 
         except:
             pass
 
 
-    def get_driver(self):
-        return self.driver, self._speakers[self.speaker], self.speaker
-
-
-class TestGetPowellsLinks():
-
-    def __init__(self):
-        self.speech_links = list()
-        self.nth_child = None
-        self.target = None
-
-    # Sanitize the file name to remove invalid characters
-    def sanitize_filename(self, filename):
-        # Remove characters that are not allowed in Windows file names
-        return re.sub(r'[<>:"/\\|?*]', '_', filename)
-
     def generate_document(self, link):
 
         try:
-            self.driver.get(link)
+            self._driver.get(link)
             print(f"::-> Generate document for link {link}")
 
             # Wait until the article element is loaded
-            article_element = WebDriverWait(self.driver, 10).until(
+            article_element = WebDriverWait(self._driver, 10).until(
                 ExpectedConditions.presence_of_element_located((By.CLASS_NAME, "title"))
             )
 
             try:
-                date_data = self.driver.find_element(By.CLASS_NAME, "article__time").text
+                date_data = self._driver.find_element(By.CLASS_NAME, "article__time").text
             except:
                 raise ValueError(
                     f"date data inexistent"
                 )
 
             try:
-                title_data = self.driver.find_element(By.CLASS_NAME, "title").text
+                title_data = self._driver.find_element(By.CLASS_NAME, "title").text
             except:
                 raise ValueError(
                     f"title data inexistent"
                 )
 
             try:
-                speaker_data = self.driver.find_element(By.CLASS_NAME, "speaker").text
+                speaker_data = self._driver.find_element(By.CLASS_NAME, "speaker").text
             except:
                 raise ValueError(
                     f"speaker data inexistent"
                 )
 
             try:
-                location_data = self.driver.find_element(By.CLASS_NAME, "location").text
+                location_data = self._driver.find_element(By.CLASS_NAME, "location").text
             except:
                 raise ValueError(
                     f"location data inexistent"
                 )
 
             try:
-                content_paragraphs = self.driver.find_elements(By.ID, "article")
+                content_paragraphs = self._driver.find_elements(By.ID, "article")
                 content_text = "\n".join([para.text for para in content_paragraphs])
             except:
                 raise ValueError(
@@ -153,19 +147,12 @@ class TestGetPowellsLinks():
             raise e
 
 
-    def select_target(self):
-        self.driver.get("https://www.federalreserve.gov/newsevents/speeches.htm")
-        seach_string = ".checkbox:nth-child(" + str(self.nth_child) + ") .ng-scope"
-        self.driver.find_element(By.CSS_SELECTOR, seach_string).click()
-        self.driver.find_element(By.CSS_SELECTOR, ".icon-more").click()
-
-
     def extract_speeches_links(self):
         base_string = "^https://www.federalreserve.gov/newsevents/speech/"
-        a_elements = self.driver.find_elements(By.XPATH, "//a[@href]")
+        a_elements = self._driver.find_elements(By.XPATH, "//a[@href]")
 
-        if self.target == "former" or self.target == "other":
-            speaker_element = self.driver.find_element(By.XPATH, "//p[@class='news__speaker ng-binding']")
+        if self.speaker == "former" or self.speaker == "other":
+            speaker_element = self._driver.find_element(By.XPATH, "//p[@class='news__speaker ng-binding']")
             speaker_name = speaker_element.text
             name_parts = speaker_name.split()
             last_name = name_parts[-1]  # should get the last name
@@ -173,27 +160,26 @@ class TestGetPowellsLinks():
 
             re_match_string = base_string + last_name + ".*$"
         else:
-            re_match_string = base_string + self.target + ".*$"
+            re_match_string = base_string + self.speaker + ".*$"
 
         for element in a_elements:
             if re.match(re_match_string, element.get_attribute("href")):
-                self.speech_links.append(element.get_attribute("href"))
-
-
-    def setup_method(self, options):
-        self.driver, self.nth_child, self.target  = options.get_driver()
-        self.vars = {}
+                self._speeches_links.append(element.get_attribute("href"))
 
 
     def teardown_method(self):
-        self.driver.quit()
-
+        self._driver.quit()
 
     def run(self):
-        self.select_target()
+
+        # Travel to the page and select the target filter with selenium
+        self._driver.get("https://www.federalreserve.gov/newsevents/speeches.htm")
+        seach_string = ".checkbox:nth-child(" + str(self._nth_child) + ") .ng-scope"
+        self._driver.find_element(By.CSS_SELECTOR, seach_string).click()
+        self._driver.find_element(By.CSS_SELECTOR, ".icon-more").click()
 
         # Find the pagination <ul> element
-        pagination_ul = self.driver.find_element(By.XPATH, "//ul[@uib-pagination]")
+        pagination_ul = self._driver.find_element(By.XPATH, "//ul[@uib-pagination]")
 
         # Find all the <a> elements inside the pagination <ul> (these represent the page numbers)
         page_links = pagination_ul.find_elements(By.TAG_NAME, "a")
@@ -206,16 +192,17 @@ class TestGetPowellsLinks():
 
         current_page = 1
 
+        # Main loop to extract the page data
         while current_page < total_pages:
             try:
 
                 # Scrape data on the current page
                 time.sleep(1)
 
-                print(f"::-> Extracting page link from page {current_page}")
+                print(f"::-> Extracting page links from page {current_page}")
                 self.extract_speeches_links()
 
-                next_button = self.driver.find_element(By.XPATH, "//li[contains(@class, 'pagination-next')]//a[text()='Next']")
+                next_button = self._driver.find_element(By.XPATH, "//li[contains(@class, 'pagination-next')]//a[text()='Next']")
                 next_button.click()
                 current_page += 1
 
@@ -223,20 +210,13 @@ class TestGetPowellsLinks():
                 print(f"::!->\n Error occurred: {e}")
                 break  # Exit the loop if there is an error (e.g., no "Next" button found)
 
-        print(f"::-> Speeches found:\n {self.speech_links} \n\n <-::")
+        print(f"::-> Speeches found:\n {self._speeches_links} \n\n <-::")
 
         try:
             # Extract all data using the list
-            for link in self.speech_links:
+            for link in self._speeches_links:
                 self.generate_document(link)
 
             self.teardown_method()
         except Exception as e:
             self.teardown_method()
-
-
-if __name__ == '__main__':
-    speeches = TestGetPowellsLinks()
-    options = SeleniumOptions(browser="firefox", headless=True, speaker="powell")
-    speeches.setup_method(options)
-    speeches.run()
